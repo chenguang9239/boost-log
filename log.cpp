@@ -12,15 +12,6 @@
 #include <chrono>
 #include <iomanip>
 
-boost::shared_ptr<logger::file_sink_t> logger::fileSinkPtr;
-boost::log::sources::severity_logger<logger::LEVEL> logger::lg;
-boost::shared_ptr<logger::basic_sink_t> logger::defaultSinkPtr = init();
-bool logger::debug = false;
-bool logger::info = true;
-bool logger::warn = true;
-bool logger::error = true;
-bool logger::fatal = true;
-
 BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", logger::LEVEL)
 
 boost::shared_ptr<logger::basic_sink_t> logger::init() {
@@ -57,6 +48,22 @@ void logger::stopDefaultLogging() {
 
 void logger::flush() {
     if (fileSinkPtr) fileSinkPtr->flush();
+}
+
+void logger::autoFlush() {
+    if (flushPeriod <= 0) return;
+    using std::chrono::duration_cast;
+    using std::chrono::system_clock;
+    using std::chrono::seconds;
+    flush();
+    auto lastFlushAt = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+    while (running) {
+        auto curTimestamp = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+        if (curTimestamp - lastFlushAt >= flushPeriod) {
+            flush();
+            lastFlushAt = curTimestamp;
+        } else { sleep(1); }
+    }
 }
 
 std::string logger::innerPutTime(struct tm *t) {
@@ -96,9 +103,10 @@ std::string logger::TimeStampToLocalTime(uint64_t timestamp) {
     return innerPutTime(std::localtime(&t));
 }
 
-void logger::initLogger(const std::string &logPath, const std::string &logName, enum LEVEL level) {
+void logger::initLogger(const std::string &logPath, const std::string &logName,
+                        enum LEVEL level, unsigned int userFlushPeriod) {
     stopDefaultLogging();
-
+    flushPeriod = userFlushPeriod;
     std::string tmpLogPath = logPath, tmpLogName = logName;
     if (!tmpLogPath.empty()) {
         while (tmpLogPath.back() == '/')
@@ -165,4 +173,38 @@ void logger::initLogger(const std::string &logPath, const std::string &logName, 
     }
 
     LOG_SPCL_IMM("init logger ok, file path: " + ss.str());
+
+    if (flushPeriod > 0) {
+        LOG_SPCL_IMM("auto flush period: " + std::to_string(flushPeriod) + "s");
+        running = true;
+        autoFlushThread = std::thread(&logger::autoFlush, this);
+    }
 }
+
+void logger::stopAutoFlush() {
+    if (flushPeriod > 0) {
+        running = false;
+        if (autoFlushThread.joinable()) {
+            autoFlushThread.join();
+        } else {
+            LOG_ERROR_IMM("autoFlushThread not joinable!");
+        }
+    }
+}
+
+logger::logger() : running(false), debug(false), info(true), warn(true),
+                   error(true), fatal(true), flushPeriod(0), defaultSinkPtr(init()) {
+}
+
+logger::~logger() {
+    stopAutoFlush();
+    // todo wait flush over
+    sleep(1);
+}
+
+logger *logger::getInstance() {
+    // need c++11
+    static logger instance;
+    return &instance;
+}
+
