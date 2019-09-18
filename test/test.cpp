@@ -4,6 +4,8 @@
 
 #include "log.h"
 
+#include <iostream>
+
 int main() {
     LOG_DEBUG << "LOG_DEBUG" << 1;
     LOG_INFO << "LOG_INFO" << 1;
@@ -32,12 +34,14 @@ int main() {
 
         int i = 0;
         while( i++ < 1000000){
+            std::cout << "print log begin..." << std::endl;
             LOG_DEBUG << "LOG_DEBUG" << 2;
             LOG_INFO << "LOG_INFO" << 2;
             LOG_WARN << "LOG_WARN" << 2;
             LOG_ERROR << "LOG_ERROR" << 2;
             LOG_FATAL << "LOG_FATAL" << 2;
             LOG_SPCL << "LOG_SPCL" << 2;
+            std::cout << "print log end..." << std::endl;
             sleep(5);
         }
     }
