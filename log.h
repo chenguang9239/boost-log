@@ -5,7 +5,8 @@
 #include <unistd.h>
 #include <boost/log/sinks.hpp>
 #include <boost/log/trivial.hpp>
-#include <boost/log/sources/severity_logger.hpp>
+//#include <boost/log/sources/severity_logger.hpp>
+#include <boost/log/sources/severity_channel_logger.hpp>
 #include <boost/smart_ptr/shared_ptr.hpp>
 
 #ifndef DOC_FEATURE_LOG_H
@@ -33,7 +34,8 @@ public:
 
     boost::shared_ptr<basic_sink_t> defaultSinkPtr;
     boost::shared_ptr<file_sink_t> fileSinkPtr;
-    boost::log::sources::severity_logger<LEVEL> lg;
+//    boost::log::sources::severity_logger<LEVEL> lg;
+    boost::log::sources::severity_channel_logger<LEVEL, std::string> lg;
 //    static boost::log::sources::severity_logger<boost::log::trivial::severity_level> lg;
 
     ~logger();
@@ -41,7 +43,9 @@ public:
     void flush();
 
     void initLogger(const std::string &logPath, const std::string &logName,
-                    enum LEVEL level, unsigned int flushPeriod = 0);
+                    enum LEVEL level, unsigned int flushPeriod = 0, const std::string &channelString = "A");
+
+    static logger *builder();
 
     static logger *getInstance();
 
