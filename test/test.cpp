@@ -129,9 +129,10 @@ int main() {
         delete logger2;
     }
 
-    sleep(3);
-    return 0;
-
+    {
+        char *p = nullptr;
+        LOG_DEBUG << "nullptr: " << std::string(p ? p : "");
+    }
 
     LOG_DEBUG << "LOG_DEBUG" << 1;
     LOG_INFO << "LOG_INFO" << 1;
